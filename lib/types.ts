@@ -15,6 +15,7 @@ export interface Renewal {
   reminderEnabled: boolean;
   reminderDaysBefore: number[]; // UI handles this as an array
   websiteDomain?: string | null;
+  createdAt?: string | Date;
 }
 
 export interface DashboardStats {
