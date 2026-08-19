@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Renewal } from '@/lib/types';
 
 // --- ICONS ---
 function CalendarIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>; }
 function ActivityIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>; }
-function RupeeIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>; }
 function TrendingUpIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>; }
+function ChevronDownIcon() { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>; }
 
 const EXCHANGE_RATES: Record<string, number> = {
   USD: 83.0,
@@ -16,12 +16,35 @@ const EXCHANGE_RATES: Record<string, number> = {
   INR: 1.0,
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: '₹',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
+const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
+
 interface SpendingSummaryProps {
   renewals: Renewal[];
   isLoading: boolean;
 }
 
 export default function SpendingSummary({ renewals, isLoading }: SpendingSummaryProps) {
+  const [currency, setCurrency] = useState<string>('INR');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const { totalMonthlyINR, totalYearlyINR, totalActive, monthlyTrendINR } = useMemo(() => {
     let monthlyINR = 0;
     let yearlyINR = 0;
@@ -35,8 +58,8 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
     renewals.forEach((renewal) => {
       if (renewal.status !== 'cancelled') {
         active += 1;
-        const currency = renewal.currency || 'USD';
-        const rate = EXCHANGE_RATES[currency] || 1.0;
+        const renewalCurrency = renewal.currency || 'USD';
+        const rate = EXCHANGE_RATES[renewalCurrency] || 1.0;
         const amountInINR = renewal.amount * rate;
 
         const monthlyContribution = renewal.billingCycle === 'yearly' ? amountInINR / 12 : amountInINR;
@@ -45,7 +68,6 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
         monthlyINR += monthlyContribution;
         yearlyINR += yearlyContribution;
 
-        // Calculate trend: Check if renewal was created before this month
         const createdDate = renewal.createdAt ? new Date(renewal.createdAt) : new Date();
         if (createdDate.getMonth() < currentMonth || createdDate.getFullYear() < currentYear) {
           previousMonthINR += monthlyContribution;
@@ -63,90 +85,131 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
     };
   }, [renewals]);
 
-  const formatINR = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
+  const formatAmount = (amountInINR: number) => {
+    const rate = EXCHANGE_RATES[currency] || 1.0;
+    const convertedAmount = amountInINR / rate;
+
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'INR',
+      currency: currency,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(convertedAmount);
   };
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-8 animate-fade-in-up delay-100">
-        {[1, 2, 3].map((i) => (
-           <div key={i} className="rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 h-[120px] animate-pulse"></div>
-        ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8 animate-fade-in-up delay-100">
+        <div className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 h-[160px] animate-pulse"></div>
+        <div className="flex flex-col gap-4">
+           <div className="rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 h-[72px] animate-pulse"></div>
+           <div className="rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 h-[72px] animate-pulse"></div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="mb-8 animate-fade-in-up delay-100">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         
-        {/* Monthly Spend Card */}
-        <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between">
+        {/* Monthly Spend Card (Main Bento Block) */}
+        <div className="lg:col-span-2 min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 sm:p-6 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between relative overflow-hidden group">
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4338ca]/10 rounded-full blur-2xl pointer-events-none group-hover:bg-[#4338ca]/20 transition-all duration-500" />
+          
           <div>
-            <div className="flex items-start justify-between gap-2 min-w-0">
-              <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug min-w-0 break-words">
-                Monthly Spend (INR)
-              </p>
-              <span className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-[var(--secondary-text)]">
-                <RupeeIcon />
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 min-w-0">
+              <div>
+                <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug">
+                  Monthly Spend
+                </p>
+                <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mt-2 tracking-tight truncate" title={formatAmount(totalMonthlyINR)}>
+                  {formatAmount(totalMonthlyINR)}
+                </p>
+              </div>
+
+              {/* Controls Group */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="flex items-center gap-1.5 bg-[#1a1827] hover:bg-[#221f35] text-zinc-200 text-xs font-medium border border-indigo-500/40 hover:border-indigo-500 rounded-lg px-2.5 py-1.5 outline-none transition-all shadow-sm cursor-pointer"
+                  >
+                    <span>{currency}</span>
+                    <span className={`transition-transform duration-200 text-indigo-400 ${isOpen ? 'rotate-180' : ''}`}>
+                      <ChevronDownIcon />
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-24 rounded-xl bg-[#161521] border border-indigo-500/30 shadow-xl overflow-hidden z-20 py-1 backdrop-blur-xl animate-fade-in">
+                      {CURRENCIES.map((cur) => (
+                        <button
+                          key={cur}
+                          onClick={() => {
+                            setCurrency(cur);
+                            setIsOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                            currency === cur 
+                              ? 'bg-[#4338ca] text-white' 
+                              : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {cur}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dynamic Currency Symbol Badge */}
+                <span className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-sm font-semibold text-zinc-300">
+                  {CURRENCY_SYMBOLS[currency] || '₹'}
+                </span>
+              </div>
             </div>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white mt-3 truncate" title={formatINR(totalMonthlyINR)}>
-              {formatINR(totalMonthlyINR)}
-            </p>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400">
-            <span className={`inline-flex items-center gap-0.5 font-semibold ${monthlyTrendINR >= 0 ? 'text-emerald-400' : 'text-zinc-400'}`}>
+
+          <div className="mt-6 pt-4 border-t border-zinc-800/60 flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+            <span className={`inline-flex items-center gap-1 font-semibold ${monthlyTrendINR >= 0 ? 'text-emerald-400' : 'text-zinc-400'}`}>
               <TrendingUpIcon />
-              {monthlyTrendINR >= 0 ? `+${formatINR(monthlyTrendINR)}` : formatINR(monthlyTrendINR)}
+              {monthlyTrendINR >= 0 ? `+${formatAmount(monthlyTrendINR)}` : formatAmount(monthlyTrendINR)}
             </span>
-            <span>vs last month</span>
+            <span>vs last month budget burn</span>
           </div>
         </div>
 
-        {/* Yearly Spend Card */}
-        <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-2 min-w-0">
-              <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug min-w-0 break-words">
-                Yearly Spend (INR)
+        {/* Right Stack: Yearly Spend & Active Renewals Cards */}
+        <div className="flex flex-col gap-4">
+          
+          <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug">
+                Yearly Spend
               </p>
-              <span className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-amber-400">
-                <CalendarIcon />
-              </span>
+              <p className="text-xl sm:text-2xl font-bold text-amber-400 mt-1 truncate" title={formatAmount(totalYearlyINR)}>
+                {formatAmount(totalYearlyINR)}
+              </p>
             </div>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-amber-400 mt-3 truncate" title={formatINR(totalYearlyINR)}>
-              {formatINR(totalYearlyINR)}
-            </p>
+            <span className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-amber-400">
+              <CalendarIcon />
+            </span>
           </div>
-          <div className="mt-3 text-xs text-zinc-500">
-            Estimated annual commitment
-          </div>
-        </div>
 
-        {/* Active Renewals Card */}
-        <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-2 min-w-0">
-              <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug min-w-0 break-words">
+          <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-zinc-400 tracking-wider uppercase leading-snug">
                 Active Renewals
               </p>
-              <span className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-[#4338ca]">
-                <ActivityIcon />
-              </span>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-1">
+                {totalActive}
+              </p>
             </div>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white mt-3 truncate">
-              {totalActive}
-            </p>
+            <span className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-[#4338ca]">
+              <ActivityIcon />
+            </span>
           </div>
-          <div className="mt-3 text-xs text-zinc-500">
-            Currently tracked services
-          </div>
+
         </div>
 
       </div>

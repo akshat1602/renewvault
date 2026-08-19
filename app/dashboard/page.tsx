@@ -156,7 +156,7 @@ export default function Dashboard() {
 
       <div className="relative z-10 mx-auto max-w-6xl">
         
-        {/* Header - Added relative z-50 to ensure bell dropdown renders over everything */}
+        {/* Header */}
         <div className="relative z-50 flex flex-col gap-4 mb-8 pt-14 lg:pt-0 sm:flex-row sm:items-center sm:justify-between animate-fade-in-up">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">Welcome back</h1>
@@ -175,11 +175,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- V2 SPENDING SUMMARY COMPONENT --- */}
+        {/* --- SPENDING SUMMARY COMPONENT --- */}
         <SpendingSummary renewals={renewals} isLoading={isLoading} />
 
-        {/* --- COMMAND / FILTER BAR --- */}
-        <div className="relative z-40 flex flex-col gap-4 mb-8 rounded-2xl border border-zinc-800 bg-[#121214]/90 backdrop-blur-md p-3.5 shadow-sm animate-fade-in-up delay-200 lg:flex-row lg:items-center lg:justify-between">
+        {/* --- COMMAND / FILTER BAR (Non-Sticky) --- */}
+        <div className="flex flex-col gap-4 mb-8 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-3.5 shadow-sm animate-fade-in-up delay-200 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:w-72">
             <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <SearchIcon />
