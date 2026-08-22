@@ -8,95 +8,22 @@ import StatsSection from "@/app/components/StatsSection";
 import FeatureGrid from "@/app/components/FeatureGrid";
 import StatusPill from "@/app/components/StatusPill";
 
-const WORKFLOW_STEPS = [
-  {
-    id: "add",
-    label: "Subscription added",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 8v8M8 12h8" />
-      </svg>
-    ),
-  },
-  {
-    id: "remind",
-    label: "Reminder scheduled",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-      </svg>
-    ),
-  },
-  {
-    id: "track",
-    label: "Renewal tracked",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    ),
-  },
-];
-
-const LOG_MESSAGES = [
-  "Renewal tracked — Notion Pro",
-  "Reminder sent — AWS",
-  "Subscription added — Spotify",
-  "Renewal tracked — Figma",
-  "Reminder sent — Adobe CC",
-  "Subscription added — Linear",
-];
-
 export default function Home() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [visibleLogs, setVisibleLogs] = useState<{ key: number; text: string }[]>([
-    { key: 0, text: LOG_MESSAGES[0] },
-  ]);
-  const logIndexRef = useRef(1);
-  const logKeyRef = useRef(1);
-
-  // --- NEW: State to hold the dynamic destination URL ---
+  const [simulatedCount, setSimulatedCount] = useState(4);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState("/sign-in");
 
-  // --- NEW: Check session on load and update URL if logged in ---
+  const handleSimulate = (name: string, price: string) => {
+    setSimulatedCount((prev) => prev + 1);
+    setToastMessage(`Successfully simulated tracking ${name} (${price})!`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   useEffect(() => {
     fetch("/api/auth/session")
       .then((res) => res.json())
       .then((session) => {
-        // If a user exists in the session, redirect them to the dashboard instead
         if (session?.user) {
           setTargetUrl("/dashboard");
         }
@@ -113,37 +40,17 @@ export default function Home() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (prefersReducedMotion) {
-      setVisibleLogs([
-        { key: 0, text: LOG_MESSAGES[0] },
-        { key: 1, text: LOG_MESSAGES[1] },
-        { key: 2, text: LOG_MESSAGES[2] },
-      ]);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setVisibleLogs((prev) => {
-        const next = {
-          key: logKeyRef.current++,
-          text: LOG_MESSAGES[logIndexRef.current % LOG_MESSAGES.length],
-        };
-        logIndexRef.current += 1;
-        return [next, ...prev].slice(0, 3);
-      });
-    }, 2600);
-
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-[var(--bg)] text-[var(--text-primary)]">
       <div className="animate-mesh-sweep pointer-events-none fixed inset-0 z-0 opacity-40" />
+
+      {/* --- TOAST NOTIFICATION --- */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-zinc-900/95 border border-indigo-500/40 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl animate-fade-in-up">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+          <p className="text-xs font-medium text-zinc-200">{toastMessage}</p>
+        </div>
+      )}
 
       <div
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
@@ -194,92 +101,68 @@ export default function Home() {
           </p>
 
           <div className="animate-fade-in-up delay-300 mt-8 flex flex-row items-center justify-center gap-4 lg:justify-start">
-            
-            {/* --- UPDATED: Uses targetUrl state for the redirect --- */}
             <Link href={targetUrl}>
               <Button className="h-11 rounded-full bg-[var(--secondary)] px-8 text-base font-medium text-[var(--text-primary)] shadow-md shadow-black/30 transition-colors hover:bg-[var(--secondary-hover)] cursor-pointer">
                 Get started
               </Button>
             </Link>
-
           </div>
         </div>
 
-        {/* Right: animated workflow demo */}
-        <div className="relative w-full max-w-md pb-16 lg:max-w-lg lg:pb-8">
-          <div
-            className="animate-fade-in-up relative rounded-[20px] border border-[var(--border)] bg-[var(--surface-2)]/80 p-6 shadow-2xl shadow-black/40 backdrop-blur-sm"
-            style={{ animationDelay: "400ms" }}
-          >
-            <p className="mb-6 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              How RenewVault works
-            </p>
+        {/* Right: Interactive Live Simulation Stack (Replaces static diagram) */}
+        <div className="relative w-full max-w-md lg:max-w-md">
+          <div className="absolute -inset-1 bg-gradient-to-r from-[var(--accent)] to-[var(--secondary)] rounded-3xl blur-xl opacity-20 animate-pulse pointer-events-none" />
 
-            <div className="relative flex items-start justify-between">
-              <div className="absolute left-5 right-5 top-5 h-px overflow-hidden bg-[var(--border)]">
-                <div className="workflow-line-fill h-full bg-gradient-to-r from-[var(--accent)] to-[var(--secondary)]" />
-              </div>
-
-              {WORKFLOW_STEPS.map((step, i) => {
-                const isLast = i === WORKFLOW_STEPS.length - 1;
-                return (
-                  <div
-                    key={step.id}
-                    className="relative z-10 flex w-1/3 flex-col items-center gap-2"
-                  >
-                    <div
-                      className={`workflow-node flex h-10 w-10 items-center justify-center rounded-full border ${
-                        isLast
-                          ? "border-transparent bg-gradient-to-br from-[var(--accent)] to-[var(--secondary)] text-white"
-                          : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--accent)]"
-                      }`}
-                      style={{ animationDelay: `${700 + i * 350}ms` }}
-                    >
-                      {step.icon}
-                    </div>
-                    <span className="max-w-[90px] text-center text-[11px] leading-tight text-[var(--text-muted)]">
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Floating live activity panel */}
-          <div
-            className="animate-fade-in-up absolute -bottom-2 left-1/2 w-[88%] -translate-x-1/2 rounded-[16px] border border-[var(--border)] bg-[var(--surface)]/95 p-4 shadow-xl shadow-black/50 backdrop-blur-md lg:-bottom-6 lg:left-auto lg:right-[-8%] lg:w-[75%] lg:translate-x-0"
-            style={{ animationDelay: "1200ms" }}
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                Live activity
+          <div className="relative rounded-[20px] border border-[var(--border)] bg-[var(--surface-2)]/90 p-5 shadow-2xl shadow-black/50 backdrop-blur-md flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Live Interactive Vault
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                {simulatedCount} Active
               </span>
             </div>
-            <div className="flex flex-col gap-2.5">
-              {visibleLogs.map((log) => (
-                <div
-                  key={log.key}
-                  className="log-entry flex items-center gap-2 text-xs text-[var(--text-body)]"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="shrink-0 text-[var(--accent)]"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  <span className="truncate">{log.text}</span>
-                </div>
-              ))}
+
+            {/* Simulation Card 1 */}
+            <div className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 hover:border-[var(--accent)]/60 transition-all flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Netflix Pro</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">$15.00/mo • Due in 2 days</p>
+              </div>
+              <button
+                onClick={() => handleSimulate("Netflix Pro", "$15.00")}
+                className="rounded-lg bg-[var(--accent)]/10 hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white px-2.5 py-1 text-[11px] font-medium border border-[var(--accent)]/20 transition-all cursor-pointer"
+              >
+                Simulate
+              </button>
+            </div>
+
+            {/* Simulation Card 2 */}
+            <div className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 hover:border-[var(--accent)]/60 transition-all flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">GitHub Copilot</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">$10.00/mo • Due in 5 days</p>
+              </div>
+              <button
+                onClick={() => handleSimulate("GitHub Copilot", "$10.00")}
+                className="rounded-lg bg-[var(--accent)]/10 hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white px-2.5 py-1 text-[11px] font-medium border border-[var(--accent)]/20 transition-all cursor-pointer"
+              >
+                Simulate
+              </button>
+            </div>
+
+            {/* Simulation Card 3 */}
+            <div className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 hover:border-[var(--accent)]/60 transition-all flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Spotify Premium</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">$9.99/mo • Due next week</p>
+              </div>
+              <button
+                onClick={() => handleSimulate("Spotify", "$9.99")}
+                className="rounded-lg bg-[var(--accent)]/10 hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white px-2.5 py-1 text-[11px] font-medium border border-[var(--accent)]/20 transition-all cursor-pointer"
+              >
+                Simulate
+              </button>
             </div>
           </div>
         </div>
@@ -305,36 +188,6 @@ export default function Home() {
       </footer>
 
       <style jsx global>{`
-        @keyframes workflow-line-fill {
-          from {
-            transform: translateX(-100%);
-          }
-          to {
-            transform: translateX(0%);
-          }
-        }
-        .workflow-line-fill {
-          animation: workflow-line-fill 1.6s ease-out 0.6s both;
-        }
-
-        @keyframes workflow-node-pop {
-          0% {
-            transform: scale(0.6);
-            opacity: 0;
-          }
-          60% {
-            transform: scale(1.08);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .workflow-node {
-          animation: workflow-node-pop 0.5s ease-out both;
-        }
-
         @keyframes pulse-dot {
           0%,
           100% {
@@ -348,29 +201,6 @@ export default function Home() {
         }
         .pulse-dot {
           animation: pulse-dot 1.6s ease-in-out infinite;
-        }
-
-        @keyframes log-in {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .log-entry {
-          animation: log-in 0.4s ease-out both;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .workflow-line-fill,
-          .workflow-node,
-          .pulse-dot,
-          .log-entry {
-            animation: none !important;
-          }
         }
       `}</style>
     </main>
