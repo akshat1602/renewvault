@@ -79,8 +79,8 @@ export default function NotificationBell() {
 
       {/* Dropdown Panel - Solid Opaque Background */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-zinc-800 bg-[#121214] shadow-2xl z-50 animate-fade-in-up overflow-hidden">
-          
+
+                  <div className="fixed left-4 right-4 top-20 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-96 max-w-full rounded-2xl border border-zinc-800 bg-[#121214] shadow-2xl z-50 animate-fade-in-up overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 bg-zinc-900">
             <h3 className="text-sm font-bold text-white">Notifications</h3>
