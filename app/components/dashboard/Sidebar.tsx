@@ -154,8 +154,10 @@ export default function Sidebar() {
   }
 
   return (
-    <aside
-      className={`sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-zinc-800/80 bg-[#121214]/90 backdrop-blur-xl transition-all duration-300 ease-in-out ${
+    
+        <aside
+      className={`hidden lg:flex sticky top-0 z-30 h-screen shrink-0 flex-col border-r border-zinc-800/80 bg-[#121214]/90 backdrop-blur-xl transition-all duration-300 ease-in-out ${
+
         collapsed ? "w-20" : "w-64"
       }`}
     >
