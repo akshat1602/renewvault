@@ -18,11 +18,13 @@ RenewVault is a full-stack subscription and renewal tracking web application. It
 
 ## Features
 
-- **Dashboard overview** — welcome summary, filterable and sortable list of active renewals
-- **Renewal cards** — status-colored indicators (active, due soon, expired) with quick actions
+- **Dashboard overview** — welcome summary, filterable and sortable list of active renewals with live per-status counts on each filter chip
+- **Multi-currency spending summary** — view monthly and yearly spend converted across INR, USD, EUR, and GBP
+- **Renewal cards** — status-colored indicators (active, due soon, expired) with quick actions and accessible, touch-friendly controls
+- **Empty states** — clear guidance shown when there are no renewals yet or a search/filter returns no matches
+- **Mobile-first navigation** — dedicated top bar and bottom tab navigation for small screens, alongside a collapsible sidebar on desktop
 - **Reminders** — automated notifications for upcoming renewal dates via scheduled cron jobs
 - **Settings** — manage account and notification preferences
-- **Responsive sidebar navigation** — collapsible layout that adapts across desktop and mobile
 - **Auth** — secure sign-in/sign-up flow
 
 ## Tech Stack
@@ -60,6 +62,7 @@ renewvault/
 │   └── globals.css
 ├── lib/
 │   ├── types.ts        # Shared types (frontend + backend)
+│   ├── currency.ts      # Shared currency conversion utility
 │   ├── mock-data.ts     # Frontend-only mock data
 │   └── prisma.ts        # Backend database client
 ├── prisma/
@@ -176,11 +179,10 @@ git checkout -b feature/your-feature-name
 
 ## Roadmap
 
+- [ ] Live exchange rate API integration (currently static rates)
 - [ ] Additional dashboard features (see project mind map)
 
 ## Contributors
 
 - [Alfee123-web](https://github.com/Alfee123-web) — Frontend / UI
 - [akshat1602](https://github.com/akshat1602) — Backend / Auth / Database
-
-
