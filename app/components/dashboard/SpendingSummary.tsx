@@ -52,8 +52,9 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
     let previousMonthINR = 0;
 
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    // Use a single absolute month index (year * 12 + month) so comparisons
+    // never break across a year boundary (e.g. Dec 2026 vs Jan 2027).
+    const currentAbsoluteMonth = now.getFullYear() * 12 + now.getMonth();
 
     renewals.forEach((renewal) => {
       if (renewal.status !== 'cancelled') {
@@ -69,7 +70,9 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
         yearlyINR += yearlyContribution;
 
         const createdDate = renewal.createdAt ? new Date(renewal.createdAt) : new Date();
-        if (createdDate.getMonth() < currentMonth || createdDate.getFullYear() < currentYear) {
+        const createdAbsoluteMonth = createdDate.getFullYear() * 12 + createdDate.getMonth();
+
+        if (createdAbsoluteMonth < currentAbsoluteMonth) {
           previousMonthINR += monthlyContribution;
         }
       }
@@ -113,8 +116,11 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         
         {/* Monthly Spend Card (Main Bento Block) */}
-        <div className="lg:col-span-2 min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 sm:p-6 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4338ca]/10 rounded-full blur-2xl pointer-events-none group-hover:bg-[#4338ca]/20 transition-all duration-500" />
+        <div className="lg:col-span-2 min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 sm:p-6 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between relative group">
+          {/* Decorative blur — contained in its own clipped wrapper so it doesn't clip the dropdown below */}
+          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4338ca]/10 rounded-full blur-2xl group-hover:bg-[#4338ca]/20 transition-all duration-500" />
+          </div>
           
           <div>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 min-w-0">
@@ -141,7 +147,7 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
                   </button>
 
                   {isOpen && (
-                    <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-24 rounded-xl bg-[#161521] border border-indigo-500/30 shadow-xl overflow-hidden z-20 py-1 backdrop-blur-xl animate-fade-in">
+                    <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-28 rounded-xl bg-[#161521] border border-indigo-500/30 shadow-xl overflow-hidden z-30 py-1 backdrop-blur-xl animate-fade-in">
                       {CURRENCIES.map((cur) => (
                         <button
                           key={cur}
