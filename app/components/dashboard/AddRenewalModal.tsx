@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Renewal } from "@/lib/types";
 
 // --- POPULAR SUBSCRIPTIONS TEMPLATES ---
@@ -36,12 +36,15 @@ function ChevronLeftIcon() { return <svg width="16" height="16" viewBox="0 0 24 
 function ChevronRightIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>; }
 function ChevronUpSmallIcon() { return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>; }
 function ChevronDownSmallIcon() { return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>; }
+function AlertIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>; }
 
 export default function AddRenewalModal({
   onClose,
   onAdd,
   onUpdate,
   editingRenewal,
+  renewals,
+  onSwitchToEdit,
 }: AddRenewalModalProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -71,6 +74,13 @@ export default function AddRenewalModal({
     { value: "yearly", label: "Yearly" },
   ];
 
+  // Today's date as YYYY-MM-DD, used to block past-date selection (today itself is allowed)
+  const getTodayStr = () => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  };
+  const todayStr = getTodayStr();
+
   useEffect(() => {
     if (editingRenewal) {
       const isKnown = PREDEFINED_SERVICES.some(s => s.domain === editingRenewal.websiteDomain && s.id !== 'custom');
@@ -95,13 +105,44 @@ export default function AddRenewalModal({
     }
   }, [editingRenewal]);
 
+  // --- DUPLICATE DETECTION ---
+  // Warns (doesn't block) if an active/upcoming renewal already matches this
+  // service by name OR website domain. Skipped entirely while editing an
+  // existing renewal (so editing Netflix doesn't warn against itself).
+  // `renewals` is optional (see AddRenewalModalProps), so we fall back to an
+  // empty array whenever the caller doesn't pass it in.
+  const duplicateRenewal = useMemo(() => {
+    if (editingRenewal) return null;
+    if (!formData.name.trim() && !formData.websiteDomain) return null;
+
+    const list = renewals ?? [];
+
+    return (
+      list.find((r) => {
+        if (r.status === "cancelled") return false;
+        const domainMatch =
+          formData.websiteDomain && r.websiteDomain && r.websiteDomain === formData.websiteDomain;
+        const nameMatch =
+          formData.name.trim() &&
+          r.name.trim().toLowerCase() === formData.name.trim().toLowerCase();
+        return domainMatch || nameMatch;
+      }) || null
+    );
+  }, [formData.name, formData.websiteDomain, renewals, editingRenewal]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.name.trim()) newErrors.name = "Please select a service or enter a custom name.";
     if (isCustom && !formData.category.trim()) newErrors.category = "Category is required.";
-    if (!formData.dueDate) newErrors.dueDate = "Due date is required.";
+    if (!formData.dueDate) {
+      newErrors.dueDate = "Due date is required.";
+    } else if (!editingRenewal && formData.dueDate < todayStr) {
+      // Only block past dates when creating a NEW renewal.
+      // Editing an existing (possibly already-overdue) renewal is still allowed.
+      newErrors.dueDate = "Invalid date — please select today or a future date.";
+    }
     if (!formData.amount || parseFloat(formData.amount) <= 0) newErrors.amount = "Valid amount is required.";
 
     if (Object.keys(newErrors).length > 0) {
@@ -149,6 +190,13 @@ export default function AddRenewalModal({
 
   const handleSelectDay = (day: number) => {
     const formattedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    // Block past dates — today is allowed, anything before today is not
+    if (formattedDate < todayStr) {
+      setErrors({ ...errors, dueDate: "Invalid date — please select today or a future date." });
+      return; // keep the calendar open so the user can pick again
+    }
+
     setFormData({ ...formData, dueDate: formattedDate });
     setIsCalendarOpen(false);
     if (errors.dueDate) setErrors({ ...errors, dueDate: "" });
@@ -192,6 +240,28 @@ export default function AddRenewalModal({
               </svg>
             </div>
             {errors.name && <p className="text-[#ef4444] text-xs mt-1.5 px-1">{errors.name}</p>}
+
+            {/* --- DUPLICATE WARNING (non-blocking) --- */}
+            {duplicateRenewal && (
+              <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 flex items-start gap-2.5 animate-fade-in-up">
+                <span className="text-amber-400 mt-0.5 flex-shrink-0"><AlertIcon /></span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-amber-200 leading-snug">
+                    You already have <span className="font-semibold">{duplicateRenewal.name}</span> tracked
+                    {duplicateRenewal.dueDate && (
+                      <> (due {new Date(duplicateRenewal.dueDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})</>
+                    )}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchToEdit?.(duplicateRenewal)}
+                    className="mt-1.5 text-xs font-semibold text-amber-300 underline hover:text-amber-100 transition-colors cursor-pointer"
+                  >
+                    Edit existing instead
+                  </button>
+                </div>
+              </div>
+            )}
 
             {isServiceOpen && (
               <>
@@ -266,7 +336,11 @@ export default function AddRenewalModal({
             <div
               onClick={() => setIsCalendarOpen(!isCalendarOpen)}
               className={`w-full rounded-xl border bg-[#121212] px-4 py-3.5 text-sm text-white cursor-pointer flex justify-between items-center transition-colors ${
-                isCalendarOpen || errors.dueDate ? "border-[#5b5fd8]" : "border-[var(--border)] hover:border-[#5b5fd8]/50"
+                errors.dueDate
+                  ? "border-red-500/80"
+                  : isCalendarOpen
+                  ? "border-[#5b5fd8]"
+                  : "border-[var(--border)] hover:border-[#5b5fd8]/50"
               }`}
             >
               <div className="flex items-center gap-3 text-zinc-300">
@@ -328,6 +402,7 @@ export default function AddRenewalModal({
                       const day = i + 1;
                       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                       const isSelected = formData.dueDate === dateStr;
+                      const isPast = dateStr < todayStr;
 
                       return (
                         <button
@@ -337,6 +412,8 @@ export default function AddRenewalModal({
                           className={`h-8 w-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                             isSelected
                               ? "bg-[#5b5fd8] text-white font-bold shadow-md"
+                              : isPast
+                              ? "text-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-500"
                               : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
                           }`}
                         >

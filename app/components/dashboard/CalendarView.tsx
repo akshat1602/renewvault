@@ -100,7 +100,7 @@ export default function CalendarView({ renewals, onEdit }: CalendarViewProps) {
             <button
               key={day}
               onClick={() => hasRenewals && setSelectedDay(dateString)}
-              className="min-h-[56px] sm:min-h-[100px] p-1.5 sm:p-2 transition-colors text-left flex flex-col sm:block xs:cursor-default"
+              className="min-h-[56px] sm:min-h-[100px] p-1.5 sm:p-2 transition-colors text-left flex flex-col sm:block sm:cursor-default"
               style={{
                 borderBottom: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
                 borderRight: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
@@ -123,17 +123,17 @@ export default function CalendarView({ renewals, onEdit }: CalendarViewProps) {
                 </span>
               </div>
 
-              {/* Dots — mobile only */}
+              {/* Dots — mobile + tablet (below sm / 640px) */}
               {hasRenewals && (
-                <div className="flex xs:hidden items-center gap-1 mt-1 flex-wrap">
+                <div className="flex sm:hidden items-center gap-1 mt-1 flex-wrap">
                   {daysRenewals.slice(0, 4).map((r, i) => (
                     <span key={r.id} className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: DOT_COLORS[i % DOT_COLORS.length] }} />
                   ))}
                 </div>
               )}
 
-              {/* Logo-focused compact badge pills — xs and up */}
-              <div className="hidden xs:flex flex-col gap-1.5 mt-1">
+              {/* Logo-focused compact badge pills — sm (640px) and up */}
+              <div className="hidden sm:flex flex-col gap-1.5 mt-1">
                 {daysRenewals.map((renewal) => (
                   <div
                     key={renewal.id}
@@ -160,10 +160,10 @@ export default function CalendarView({ renewals, onEdit }: CalendarViewProps) {
         })}
       </div>
 
-      {/* Mobile popover — day detail */}
+      {/* Mobile + tablet popover — day detail (below sm / 640px) */}
       {selectedDay && (
         <div
-          className="xs:hidden fixed inset-0 z-50 flex items-end justify-center"
+          className="sm:hidden fixed inset-0 z-50 flex items-end justify-center"
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={() => setSelectedDay(null)}
         >

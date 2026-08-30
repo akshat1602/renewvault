@@ -56,18 +56,18 @@ export default async function SettingsPage() {
               <h2 className="text-sm font-semibold text-white uppercase tracking-wider">Notifications</h2>
             </div>
             <div className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 flex-shrink-0">
                     <BellIcon />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Email Reminders</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">Email Reminders</p>
                     <p className="text-xs text-zinc-500">Receive alerts when renewals are due.</p>
                   </div>
                 </div>
                 
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400">
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400 self-start sm:self-auto flex-shrink-0 whitespace-nowrap">
                   <span className="relative flex h-1.5 w-1.5 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
