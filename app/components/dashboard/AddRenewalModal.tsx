@@ -24,6 +24,8 @@ interface AddRenewalModalProps {
   onAdd: (renewal: Renewal) => void;
   onUpdate: (renewal: Renewal) => void;
   editingRenewal: Renewal | null;
+  renewals?: Renewal[]; // Added to fix Vercel Type error
+  onSwitchToEdit?: (renewal: any) => void; // Added to fix Vercel Type error
 }
 
 // --- CLEAN MINIMAL ICONS ---
