@@ -3,6 +3,9 @@
 RenewVault is a full-stack subscription and renewal tracking web application. It helps users keep track of recurring subscriptions, upcoming renewals, and reminders — all in one clean, responsive dashboard.
 
 ## Preview : https://www.renewvault.me/
+**Entry Page**
+
+<img width="1890" height="905" alt="image" src="https://github.com/user-attachments/assets/05be13e8-d4a0-4c0f-b60e-5103441d1521" />
 
 **Sign In**
 
