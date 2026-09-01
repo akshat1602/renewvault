@@ -115,8 +115,8 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
     <div className="mb-8 animate-fade-in-up delay-100">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         
-        {/* Monthly Spend Card (Main Bento Block) */}
-        <div className="lg:col-span-2 min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 sm:p-6 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between relative group">
+        {/* Monthly Spend Card (Main Bento Block) - Added z-20 to fix clipping */}
+        <div className="lg:col-span-2 min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 sm:p-6 shadow-sm hover:border-zinc-700 transition-colors flex flex-col justify-between relative group z-20">
           {/* Decorative blur — contained in its own clipped wrapper so it doesn't clip the dropdown below */}
           <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
             <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4338ca]/10 rounded-full blur-2xl group-hover:bg-[#4338ca]/20 transition-all duration-500" />
@@ -147,7 +147,7 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
                   </button>
 
                   {isOpen && (
-                    <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-28 rounded-xl bg-[#161521] border border-indigo-500/30 shadow-xl overflow-hidden z-30 py-1 backdrop-blur-xl animate-fade-in">
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-28 rounded-xl bg-[#161521] border border-indigo-500/30 shadow-xl overflow-hidden z-50 py-1 backdrop-blur-xl animate-fade-in">
                       {CURRENCIES.map((cur) => (
                         <button
                           key={cur}
@@ -185,8 +185,8 @@ export default function SpendingSummary({ renewals, isLoading }: SpendingSummary
           </div>
         </div>
 
-        {/* Right Stack: Yearly Spend & Active Renewals Cards */}
-        <div className="flex flex-col gap-4">
+        {/* Right Stack: Yearly Spend & Active Renewals Cards - Added relative z-10 */}
+        <div className="flex flex-col gap-4 relative z-10">
           
           <div className="min-w-0 rounded-2xl border border-zinc-800 bg-[#121214]/80 backdrop-blur-md p-5 shadow-sm hover:border-zinc-700 transition-colors flex items-center justify-between">
             <div>
