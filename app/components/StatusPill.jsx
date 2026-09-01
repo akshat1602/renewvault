@@ -13,7 +13,7 @@ export default function StatusPill() {
       
       {/* Primary Status (always visible, prevented from wrapping) */}
       <span className="text-zinc-200 font-medium tracking-wide whitespace-nowrap">
-        v1.0 Live
+        v2.0 Live
       </span>
       
       {/* Separator and Secondary Text (hidden on mobile, visible on small screens and up) */}
