@@ -4,9 +4,54 @@ import { useEffect, useState } from "react";
 
 type Status = "loading" | "unsupported" | "default" | "granted" | "denied";
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export default function NotificationPrompt() {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
+
+  async function syncPushSubscription(registration: ServiceWorkerRegistration) {
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey || !("pushManager" in registration)) return;
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
+      });
+    }
+
+    const json = subscription.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      throw new Error("Incomplete push subscription keys");
+    }
+
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: {
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to save push subscription: ${res.status}`);
+    }
+  }
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
@@ -15,9 +60,11 @@ export default function NotificationPrompt() {
     }
     setStatus(Notification.permission as Status);
 
-    // Already granted earlier: make sure the SW is registered
     if (Notification.permission === "granted") {
-      navigator.serviceWorker.register("/sw.js").catch(console.error);
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => navigator.serviceWorker.ready.then(() => syncPushSubscription(reg)))
+        .catch(console.error);
     }
   }, []);
 
@@ -29,7 +76,9 @@ export default function NotificationPrompt() {
 
       if (permission === "granted") {
         const registration = await navigator.serviceWorker.register("/sw.js");
-        console.log("[PWA] Service worker registered:", registration.scope);
+        await navigator.serviceWorker.ready;
+        await syncPushSubscription(registration);
+        console.log("[PWA] Push subscription synced:", registration.scope);
       }
     } catch (error) {
       console.error("[PWA] Notification setup failed:", error);
@@ -83,13 +132,13 @@ export default function NotificationPrompt() {
 
           {status === "granted" && (
             <p className="mt-1 text-sm text-emerald-400">
-              Notifications are on. You're all set.
+              Notifications are on. You&apos;re all set.
             </p>
           )}
 
           {status === "denied" && (
             <p className="mt-1 text-sm text-zinc-400">
-              Notifications are blocked. Enable them from your browser's site
+              Notifications are blocked. Enable them from your browser&apos;s site
               settings to get renewal alerts.
             </p>
           )}

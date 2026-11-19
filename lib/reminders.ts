@@ -4,94 +4,111 @@ import { generateReminderEmailHtml } from "./email-templates";
 import fs from "fs";
 import path from "path";
 
-// Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+export type ReminderNotificationPayload = {
+  userId: string;
+  title: string;
+  body: string;
+  url?: string;
+};
 
 export async function processDailyReminders() {
   console.log("Starting daily reminder processing...");
 
-  // 1. Get "today" normalized to midnight
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const todayUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
 
-  // 2. Fetch all renewals that have reminders enabled
   const activeRenewals = await prisma.renewal.findMany({
     where: {
       reminderEnabled: true,
       status: { in: ["upcoming", "due-soon"] },
-      reminderDaysBefore: { not: null }, 
+      reminderDaysBefore: { not: null },
     },
     include: {
-      user: true, 
+      user: true,
     },
   });
 
   let emailsSent = 0;
+  const notifications: ReminderNotificationPayload[] = [];
 
-  // Read the PNG logo
   const logoPath = path.join(process.cwd(), "public", "logo.png");
   let logoBuffer: Buffer | null = null;
   try {
     logoBuffer = fs.readFileSync(logoPath);
-  } catch (error) {
+  } catch {
     console.error("Warning: logo.png not found.");
   }
 
-  // 3. Loop through and check all reminder days
   for (const renewal of activeRenewals) {
-    if (!renewal.user?.email || !renewal.reminderDaysBefore) continue;
+    if (!renewal.userId || !renewal.reminderDaysBefore) continue;
 
-    // Safely cast to string and parse into a number array
     const rawReminders = String(renewal.reminderDaysBefore);
     const daysArray = rawReminders
-      .split(',')
+      .split(",")
       .map(Number)
       .filter((n: number) => !isNaN(n));
 
-    // Find if ANY of the reminder days match "today" with explicit type annotation
     const matchedDays = daysArray.find((days: number) => {
-      const alertDate = new Date(renewal.dueDate);
-      alertDate.setDate(alertDate.getDate() - days);
-      alertDate.setHours(0, 0, 0, 0);
-      return alertDate.getTime() === today.getTime();
+      const due = new Date(renewal.dueDate);
+      const alertDateUtc = new Date(
+        Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate() - days)
+      );
+      return alertDateUtc.getTime() === todayUtc.getTime();
     });
 
-    // 4. If we found a match, send the email
     if (matchedDays !== undefined) {
-      try {
-        const html = generateReminderEmailHtml(
-          renewal.user.name || "Vault User",
-          renewal.name,
-          renewal.amount,
-          renewal.currency,
-          renewal.dueDate, // Pass the Date object directly without .toISOString()
-          matchedDays 
-        );
-        
-        const attachments = logoBuffer ? [
-          {
-            filename: "logo.png",
-            content: logoBuffer,
-            contentId: "renewvault-logo",
-          },
-        ] : [];
+      const dayLabel = matchedDays === 1 ? "1 day" : `${matchedDays} days`;
+      const amountLabel = `${renewal.amount} ${renewal.currency}`;
 
-        await resend.emails.send({
-          from: "RenewVault <reminders@renewvault.me>", 
-          to: renewal.user.email, 
-          subject: `Reminder: ${renewal.name} renews in ${matchedDays} day${matchedDays === 1 ? '' : 's'}`,
-          html: html,
-          attachments: attachments,
-        });
+      notifications.push({
+        userId: renewal.userId,
+        title: `Renewal Reminder: ${renewal.name}`,
+        body: `${renewal.name} (${amountLabel}) renews in ${dayLabel}.`,
+        url: "/dashboard",
+      });
 
-        emailsSent++;
-        console.log(`Sent reminder to ${renewal.user.email} for ${renewal.name}`);
-      } catch (error) {
-        console.error(`Failed to send reminder for renewal ID ${renewal.id}:`, error);
+      if (renewal.user?.email) {
+        try {
+          const html = generateReminderEmailHtml(
+            renewal.user.name || "Vault User",
+            renewal.name,
+            renewal.amount,
+            renewal.currency,
+            renewal.dueDate,
+            matchedDays
+          );
+
+          const attachments = logoBuffer
+            ? [
+                {
+                  filename: "logo.png",
+                  content: logoBuffer,
+                  contentId: "renewvault-logo",
+                },
+              ]
+            : [];
+
+          await resend.emails.send({
+            from: "RenewVault <reminders@renewvault.me>",
+            to: renewal.user.email,
+            subject: `Reminder: ${renewal.name} renews in ${dayLabel}`,
+            html,
+            attachments,
+          });
+
+          emailsSent++;
+          console.log(`Sent reminder to ${renewal.user.email} for ${renewal.name}`);
+        } catch (error) {
+          console.error(`Failed to send reminder for renewal ID ${renewal.id}:`, error);
+        }
       }
     }
   }
 
-  console.log(`Finished processing. Sent ${emailsSent} emails.`);
-  return { success: true, emailsSent };
+  console.log(`Finished processing. Sent ${emailsSent} emails and queued ${notifications.length} push items.`);
+  return { success: true, emailsSent, notifications };
 }
